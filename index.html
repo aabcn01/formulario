@@ -2,49 +2,89 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Prueba de envío simple</title>
+  <title>Formulario AABCN01</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+    input, textarea, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 8px;
+    }
+    #log {
+      font-size: 12px;
+      background: #f4f4f4;
+      border: 1px solid #ccc;
+      padding: 10px;
+      white-space: pre-wrap;
+    }
+  </style>
 </head>
 <body>
-  <h2>Prueba sin imagen</h2>
+  <h2>Publicar evento o aviso</h2>
   <form id="formulario">
     <input type="text" name="distrito" placeholder="Distrito" required>
     <input type="text" name="grupo" placeholder="Grupo" required>
-    <button type="submit">Enviar</button>
+    <input type="text" name="ciudad" placeholder="Ciudad" required>
+    <input type="date" name="fecha" required>
+    <textarea name="descripcion" placeholder="Descripción del evento" required></textarea>
+    <input type="file" name="imagen" accept="image/*" required>
+    <button type="submit">Publicar</button>
   </form>
+
   <div id="resultado"></div>
+  <div id="log"></div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbytQZQwsgS_LHeSi787prZHkeIqjybSgUEIU06JHiDJR25j9tOBBPYMyiyDDBoneVTQ/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwW0eHL2XCND-fDJwiwglKcTQ1dyfeDh_5R2k62v_i5nVaOG5tfg1ysuQXH94qaG2Q/exec';
+
+    const log = (msg) => document.getElementById('log').textContent += msg + "\n";
 
     document.getElementById('formulario').addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
+      const file = form.imagen.files[0];
 
-      const data = {
-        distrito: form.distrito.value,
-        grupo: form.grupo.value,
-        ciudad: '',
-        fecha: '',
-        descripcion: '',
-        imagenBase64: ''
+      if (!file) return alert("Selecciona una imagen");
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result.split(',')[1];
+        log("Imagen convertida a base64");
+
+        const data = {
+          distrito: form.distrito.value,
+          grupo: form.grupo.value,
+          ciudad: form.ciudad.value,
+          fecha: form.fecha.value,
+          descripcion: form.descripcion.value,
+          imagenBase64: base64
+        };
+
+        try {
+          const res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          const result = await res.json();
+
+          if (result.status === 'ok') {
+            document.getElementById('resultado').innerHTML = `✅ Publicación enviada<br><img src="${result.imagen}" style="max-width:100%">`;
+            form.reset();
+          } else {
+            document.getElementById('resultado').textContent = "❌ Error: " + result.message;
+          }
+        } catch (err) {
+          document.getElementById('resultado').textContent = "❌ Error al enviar: " + err.message;
+        }
       };
 
-      try {
-        const res = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-
-        const result = await res.json();
-        if (result.status === 'ok') {
-          document.getElementById('resultado').innerHTML = '✅ Datos enviados correctamente';
-        } else {
-          document.getElementById('resultado').innerText = '❌ Error: ' + result.message;
-        }
-      } catch (err) {
-        document.getElementById('resultado').innerText = '❌ Error de conexión: ' + err.message;
-      }
+      reader.readAsDataURL(file);
     });
   </script>
 </body>
