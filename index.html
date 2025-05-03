@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Formulario de Publicaciones – AABCN01</title>
+  <title>Depuración de Formulario – AABCN01</title>
   <style>
     body {
       font-family: sans-serif;
@@ -20,10 +20,18 @@
       max-width: 100%;
       margin-top: 10px;
     }
+    #log {
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 20px;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
-  <h2>Publicar Evento o Aviso</h2>
+  <h2>Formulario de Publicaciones – DEPURACIÓN</h2>
 
   <form id="formulario-publicacion">
     <input type="text" name="distrito" placeholder="Distrito" required>
@@ -36,66 +44,90 @@
   </form>
 
   <div id="resultado"></div>
+  <div id="log"><strong>LOG:</strong>\n</div>
 
   <script>
     const IMGUR_CLIENT_ID = 'e8d47835f2c6a2f';
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz35PsiIkC3EWvB4bjAcba39gDj4LwzO8blI3M9pt457GQ5pEyDrqAZRLhZdNDytNO_/exec';
+
+    const log = msg => {
+      document.getElementById('log').innerText += msg + "\n";
+    };
 
     document.getElementById('formulario-publicacion').addEventListener('submit', async function (e) {
       e.preventDefault();
       const form = e.target;
       const imagen = form.imagen.files[0];
 
+      log("Inicio de envío...");
+
       if (!imagen) {
         alert("Debes seleccionar una imagen.");
         return;
       }
 
+      log("Convirtiendo imagen a base64...");
       const reader = new FileReader();
       reader.onloadend = async function () {
         const base64 = reader.result.split(',')[1];
-        const res = await fetch('https://api.imgur.com/3/image', {
-          method: 'POST',
-          headers: {
-            Authorization: 'Client-ID ' + IMGUR_CLIENT_ID,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            image: base64,
-            type: 'base64'
-          })
-        });
+        log("Imagen convertida, subiendo a Imgur...");
 
-        const data = await res.json();
-        if (!data.success) {
-          document.getElementById('resultado').innerText = '❌ Error al subir imagen a Imgur.';
-          return;
-        }
+        try {
+          const res = await fetch('https://api.imgur.com/3/image', {
+            method: 'POST',
+            headers: {
+              Authorization: 'Client-ID ' + IMGUR_CLIENT_ID,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              image: base64,
+              type: 'base64'
+            })
+          });
 
-        const imagenUrl = data.data.link;
+          const data = await res.json();
+          if (!data.success) {
+            log("❌ Error al subir imagen a Imgur:");
+            log(JSON.stringify(data, null, 2));
+            document.getElementById('resultado').innerText = '❌ Error al subir imagen a Imgur.';
+            return;
+          }
 
-        const entrada = {
-          distrito: form.distrito.value,
-          grupo: form.grupo.value,
-          ciudad: form.ciudad.value,
-          fecha: form.fecha.value,
-          descripcion: form.descripcion.value,
-          imagen: imagenUrl,
-          estado: 'activo'
-        };
+          const imagenUrl = data.data.link;
+          log("✅ Imagen subida a Imgur: " + imagenUrl);
 
-        const envio = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(entrada)
-        });
+          const entrada = {
+            distrito: form.distrito.value,
+            grupo: form.grupo.value,
+            ciudad: form.ciudad.value,
+            fecha: form.fecha.value,
+            descripcion: form.descripcion.value,
+            imagen: imagenUrl,
+            estado: 'activo'
+          };
 
-        const rta = await envio.json();
-        if (rta.status === 'ok') {
-          document.getElementById('resultado').innerHTML = "✅ Publicación enviada.<br><img src='" + imagenUrl + "'>";
-          form.reset();
-        } else {
-          document.getElementById('resultado').innerText = '❌ Error al guardar en la hoja: ' + rta.message;
+          log("Enviando datos a Google Apps Script...");
+          const envio = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(entrada)
+          });
+
+          const rta = await envio.json();
+          log("Respuesta de Apps Script:");
+          log(JSON.stringify(rta, null, 2));
+
+          if (rta.status === 'ok') {
+            document.getElementById('resultado').innerHTML = "✅ Publicación enviada correctamente.<br><img src='" + imagenUrl + "'>";
+            form.reset();
+          } else {
+            document.getElementById('resultado').innerText = '❌ Error al guardar en hoja: ' + rta.message;
+          }
+
+        } catch (err) {
+          log("❌ Error en la solicitud:");
+          log(err.message);
+          document.getElementById('resultado').innerText = '❌ Error inesperado: ' + err.message;
         }
       };
 
