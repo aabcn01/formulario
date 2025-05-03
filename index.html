@@ -40,7 +40,7 @@
   <div id="log"></div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwW0eHL2XCND-fDJwiwglKcTQ1dyfeDh_5R2k62v_i5nVaOG5tfg1ysuQXH94qaG2Q/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxubHow4pJY3OB3Div8T2_s6L37skd4KCznXd0V0fN2z69ru7m7JDtG09v2Uz4MjHWU/exec';
 
     const log = (msg) => document.getElementById('log').textContent += msg + "\n";
 
@@ -80,7 +80,7 @@
             document.getElementById('resultado').textContent = "❌ Error: " + result.message;
           }
         } catch (err) {
-          document.getElementById('resultado').textContent = "❌ Error al enviar: " + err.message;
+          document.getElementById('resultado').textContent = "❌ Error de conexión: " + err.message;
         }
       };
 
