@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Formulario de Publicaciones – AABCN01</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+    input, textarea, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 8px;
+      font-size: 14px;
+    }
+    img {
+      max-width: 100%;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Publicar Evento o Aviso</h2>
+
+  <form id="formulario-publicacion">
+    <input type="text" name="distrito" placeholder="Distrito" required>
+    <input type="text" name="grupo" placeholder="Grupo" required>
+    <input type="text" name="ciudad" placeholder="Ciudad" required>
+    <input type="date" name="fecha" required>
+    <textarea name="descripcion" placeholder="Descripción del evento" required></textarea>
+    <input type="file" name="imagen" accept="image/*" required>
+    <button type="submit">Publicar</button>
+  </form>
+
+  <div id="resultado"></div>
+
+  <script>
+    const IMGUR_CLIENT_ID = 'e8d47835f2c6a2f';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz35PsiIkC3EWvB4bjAcba39gDj4LwzO8blI3M9pt457GQ5pEyDrqAZRLhZdNDytNO_/exec';
+
+    document.getElementById('formulario-publicacion').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const form = e.target;
+      const imagen = form.imagen.files[0];
+
+      if (!imagen) {
+        alert("Debes seleccionar una imagen.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = async function () {
+        const base64 = reader.result.split(',')[1];
+        const res = await fetch('https://api.imgur.com/3/image', {
+          method: 'POST',
+          headers: {
+            Authorization: 'Client-ID ' + IMGUR_CLIENT_ID,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            image: base64,
+            type: 'base64'
+          })
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+          document.getElementById('resultado').innerText = '❌ Error al subir imagen a Imgur.';
+          return;
+        }
+
+        const imagenUrl = data.data.link;
+
+        const entrada = {
+          distrito: form.distrito.value,
+          grupo: form.grupo.value,
+          ciudad: form.ciudad.value,
+          fecha: form.fecha.value,
+          descripcion: form.descripcion.value,
+          imagen: imagenUrl,
+          estado: 'activo'
+        };
+
+        const envio = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entrada)
+        });
+
+        const rta = await envio.json();
+        if (rta.status === 'ok') {
+          document.getElementById('resultado').innerHTML = "✅ Publicación enviada.<br><img src='" + imagenUrl + "'>";
+          form.reset();
+        } else {
+          document.getElementById('resultado').innerText = '❌ Error al guardar en la hoja: ' + rta.message;
+        }
+      };
+
+      reader.readAsDataURL(imagen);
+    });
+  </script>
+</body>
+</html>
