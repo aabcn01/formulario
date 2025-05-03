@@ -1,63 +1,39 @@
 <!DOCTYPE html>
+<html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Formulario AABCN01</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      max-width: 600px;
-      margin: auto;
-      padding: 20px;
-    }
-    input, textarea, button {
-      width: 100%;
-      margin: 10px 0;
-      padding: 8px;
-    }
-    #log {
-      font-size: 12px;
-      background: #f4f4f4;
-      border: 1px solid #ccc;
-      padding: 10px;
-      white-space: pre-wrap;
-    }
-  </style>
+  <title>Formulario de Publicación</title>
 </head>
 <body>
-  <h2>Publicar evento o aviso</h2>
+  <h2>Publicar evento</h2>
   <form id="formulario">
-    <input type="text" name="distrito" placeholder="Distrito" required>
-    <input type="text" name="grupo" placeholder="Grupo" required>
-    <input type="text" name="ciudad" placeholder="Ciudad" required>
-    <input type="date" name="fecha" required>
-    <textarea name="descripcion" placeholder="Descripción del evento" required></textarea>
-    <input type="file" name="imagen" accept="image/*" required>
+    <input type="text" name="distrito" placeholder="Distrito" required><br><br>
+    <input type="text" name="grupo" placeholder="Grupo" required><br><br>
+    <input type="text" name="ciudad" placeholder="Ciudad" required><br><br>
+    <input type="date" name="fecha" required><br><br>
+    <textarea name="descripcion" placeholder="Descripción" required></textarea><br><br>
+    <input type="file" name="imagen" accept="image/*" required><br><br>
     <button type="submit">Publicar</button>
   </form>
 
-  <div id="resultado"></div>
-  <div id="log"></div>
+  <div id="resultado" style="margin-top:20px;color:green;"></div>
 
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCcZ_0FtbhvkCipWVjNgbIm7LBPuVO-4LeDffPDUeJ_lvZXshWNvGTH9ga5qh6kn_P/exec';
 
-    const log = (msg) => {
-      console.log(msg);
-      document.getElementById('log').textContent += msg + "\n";
-    };
-
-    document.getElementById('formulario').addEventListener('submit', async (e) => {
+    document.getElementById('formulario').addEventListener('submit', async function (e) {
       e.preventDefault();
       const form = e.target;
-      const file = form.imagen.files[0];
+      const resultado = document.getElementById('resultado');
+      resultado.style.color = 'black';
+      resultado.textContent = '⏳ Subiendo...';
 
-      if (!file) return alert("Selecciona una imagen");
-
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result.split(',')[1];
-        log("📦 Imagen convertida a base64");
+      const archivo = form.imagen.files[0];
+      const lector = new FileReader();
+      lector.onloadend = async function () {
+        const imagenBase64 = lector.result.split(',')[1];
 
         const data = {
           distrito: form.distrito.value,
@@ -65,7 +41,7 @@
           ciudad: form.ciudad.value,
           fecha: form.fecha.value,
           descripcion: form.descripcion.value,
-          imagenBase64: base64
+          imagenBase64: imagenBase64
         };
 
         try {
@@ -74,31 +50,24 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
           });
-
-          if (!res.ok) {
-            const errorText = await res.text();
-            log("❌ Error HTTP: " + res.status + " " + errorText);
-            document.getElementById('resultado').textContent = "❌ Error del servidor: " + res.status;
-            return;
-          }
-
           const result = await res.json();
-
           if (result.status === 'ok') {
-            document.getElementById('resultado').innerHTML = `✅ Publicación enviada<br><img src="${result.imagen}" style="max-width:100%">`;
-            log("✅ Imagen guardada en: " + result.imagen);
+            resultado.style.color = 'green';
+            resultado.innerHTML = `✅ Publicado correctamente.<br><img src="${result.imagen}" style="max-width:300px;">`;
             form.reset();
           } else {
-            document.getElementById('resultado').textContent = "❌ Error del servidor: " + result.message;
+            resultado.style.color = 'red';
+            resultado.textContent = '❌ Error: ' + result.message;
           }
         } catch (err) {
-          log("❌ Error de conexión: " + err.message);
-          document.getElementById('resultado').textContent = "❌ Error de conexión: " + err.message;
+          resultado.style.color = 'red';
+          resultado.textContent = '❌ Error de conexión: ' + err.message;
         }
       };
 
-      reader.readAsDataURL(file);
+      lector.readAsDataURL(archivo);
     });
   </script>
 </body>
 </html>
+
