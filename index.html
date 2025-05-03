@@ -40,9 +40,12 @@
   <div id="log"></div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwvQP41raGFh0ECrjaNyyv4OUnC0fhsFgMg4O_ZUjAiNBEctVSDkcdRHghYalswGMbG/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCcZ_0FtbhvkCipWVjNgbIm7LBPuVO-4LeDffPDUeJ_lvZXshWNvGTH9ga5qh6kn_P/exec';
 
-    const log = (msg) => document.getElementById('log').textContent += msg + "\n";
+    const log = (msg) => {
+      console.log(msg);
+      document.getElementById('log').textContent += msg + "\n";
+    };
 
     document.getElementById('formulario').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -54,7 +57,7 @@
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result.split(',')[1];
-        log("Imagen convertida a base64");
+        log("📦 Imagen convertida a base64");
 
         const data = {
           distrito: form.distrito.value,
@@ -71,15 +74,25 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
           });
+
+          if (!res.ok) {
+            const errorText = await res.text();
+            log("❌ Error HTTP: " + res.status + " " + errorText);
+            document.getElementById('resultado').textContent = "❌ Error del servidor: " + res.status;
+            return;
+          }
+
           const result = await res.json();
 
           if (result.status === 'ok') {
             document.getElementById('resultado').innerHTML = `✅ Publicación enviada<br><img src="${result.imagen}" style="max-width:100%">`;
+            log("✅ Imagen guardada en: " + result.imagen);
             form.reset();
           } else {
-            document.getElementById('resultado').textContent = "❌ Error: " + result.message;
+            document.getElementById('resultado').textContent = "❌ Error del servidor: " + result.message;
           }
         } catch (err) {
+          log("❌ Error de conexión: " + err.message);
           document.getElementById('resultado').textContent = "❌ Error de conexión: " + err.message;
         }
       };
